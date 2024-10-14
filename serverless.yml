@@ -1,0 +1,43 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: okashun
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: lambada
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: cost-scheduler
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ap-northeast-1
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - ce:GetCostAndUsage
+      Resource: "*"
+
+package:
+  individually: true
+  excludeDevDependencies: true
+
+custom:
+  esbuild:
+    bundle: true
+    minify: true
+    sourcemap: true
+    exclude: ["aws-sdk"]
+    target: "node20"
+    define: { "require.resolve": undefined }
+    platform: "node"
+    concurrency: 10
+    watch:
+      pattern: "src/**/*.ts" # match only typescript files in src directory
+      ignore: "temp/**/*"
+
+functions:
+  costNotifier:
+    handler: src/costNotifier.handler
+    events:
+      # 日本時間で月曜日12時に実行
+      - schedule: cron(* 3 ? * 1 *)
+    environment:
+      SLACK_WEBHOOK_URL: ${ssm:LAMBDA_SLACK_WEBHOOK_URL}
